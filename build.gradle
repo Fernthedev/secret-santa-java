@@ -1,0 +1,54 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.4.10'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
+}
+
+group 'com.github.Fernthedev'
+version '1.0.0'
+
+sourceCompatibility = targetCompatibility = "1.8"
+
+repositories {
+    mavenCentral()
+    jcenter()
+
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    implementation 'com.github.Fernthedev:FernUtils:1.4.1'
+    implementation 'com.github.Fernthedev:fern-configmanager:1.4.0'
+    implementation("com.squareup.okio:okio:2.9.0")
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
+}
+
+test {
+    useJUnitPlatform()
+
+
+}
+
+sourceSets {
+    main.kotlin.srcDirs += 'src/main/java'
+    main.java.srcDirs += 'src/main/kotlin'
+
+    test.kotlin.srcDirs += 'src/test/java'
+    test.java.srcDirs += 'src/test/kotlin'
+}
+
+application {
+    mainClassName = 'com.github.fernthedev.secret_santa.MainKt'
+}
+
+shadowJar {
+    minimize()
+}
