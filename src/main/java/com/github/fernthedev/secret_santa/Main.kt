@@ -32,10 +32,16 @@ fun main(args: Array<String>) {
     config.save()
 
     var file = File("list.txt")
+    var seed: Long? = null
 
     ArgumentArrayUtils.parseArguments(args,
-        "--listfile" to {queue -> file = File(queue.remove()) }
+        "--listfile" to {queue -> file = File(queue.remove()) },
+                "--seed" to {queue -> seed = queue.remove().toLong()}
     )
+
+    if (seed == null) {
+        seed = Random.Default.nextLong()
+    }
 
     if (!file.exists()) {
         if (!file.createNewFile()) throw FileSystemException(file, reason = "Unable to create file")
@@ -45,7 +51,10 @@ fun main(args: Array<String>) {
 
     val list = getList(file)
 
-    val map = getSecretSanta(list)
+    if (config.configData.reproduceOrder) list.sort()
+
+    requireNotNull(seed)
+    val map = getSecretSanta(list, Random(seed!!))
 
     var folder: File? = null
 
@@ -71,9 +80,18 @@ fun main(args: Array<String>) {
 
     }
 
+    val seedFile = File(folder, "seed.txt")
+
+    if (!seedFile.exists())
+        seedFile.createNewFile()
+
+    seedFile.sink().buffer().use { sink ->
+        sink.writeUtf8(seed.toString())
+    }
+
 }
 
-fun getSecretSanta(list: List<String>): Map<String, String> {
+fun getSecretSanta(list: List<String>, random: Random): Map<String, String> {
 
     if (list.isEmpty())
         error("The list is empty. No secret Santas? ;-;")
@@ -94,10 +112,11 @@ fun getSecretSanta(list: List<String>): Map<String, String> {
             .filter { candidate -> candidate != santa && !map.values.contains(candidate) } // Remove people with a secret santa or the person itself
             .collect(Collectors.toList())
 
-        // Throw error if list is empty. Theoretically this shouldn't happen.
+        // Swap someone with the last person on the list
+        // Best solution I could find
         if (candidates.isEmpty()) {
             // Swap the person with someone else
-            val oldSanta: String = map.keys.elementAt(Random.Default.nextInt(map.size - 1))
+            val oldSanta: String = map.keys.elementAt(random.nextInt(map.size - 1))
             val oldCandidate: String = map[oldSanta]!!
 
             map[santa] = oldCandidate
@@ -108,7 +127,7 @@ fun getSecretSanta(list: List<String>): Map<String, String> {
         // If there's more than 2 people, avoid making them be their own secret santa
         if (candidates.size > 1) candidates = candidates.filter { candidate -> map[candidate] != santa }
 
-        val index = if (candidates.size == 1) 0 else Random.Default.nextInt(candidates.size - 1)
+        val index = if (candidates.size == 1) 0 else random.nextInt(candidates.size - 1)
 
         map[santa] = candidates[index]
 
@@ -147,9 +166,9 @@ fun getList(file: File): ArrayList<String> {
             while (true) {
                 val line = bufferedFileSource.readUtf8Line() ?: break
 
-                if (line.isEmpty()) continue
+                if (line.trim().isEmpty()) continue
 
-                list.add(line)
+                list.add(line.trim())
             }
         }
     }
